@@ -7,7 +7,7 @@ public class Handle : MonoBehaviour
     bool stepTriger;
 
 
-    void FixedUpdate()
+    void Update()
     {
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
