@@ -115,7 +115,7 @@ public class Handle : MonoBehaviour
             {
                 List<Vector3> path = new List<Vector3>();
                 Vector3 basePos = handleSegments[0].position;
-                float stretchFactor = 3f;
+                float stretchFactor = 2f;
 
                 path.Add(basePos);
                 for (int i = 1; i < handleSegments.Length; i++)
