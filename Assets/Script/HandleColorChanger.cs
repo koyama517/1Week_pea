@@ -22,7 +22,6 @@ public class HandleColorChanger : MonoBehaviour
         if (handle.isAttacking)
         {
             // ”­ËğŒ‚ğ–‚½‚µ‚Ä‚¢‚éê‡‚Í‰©F‚É
-            sr.color = handle.ShouldLockAngle ? readyToFireColor : attackColor;
         }
         else
         {

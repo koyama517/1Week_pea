@@ -12,22 +12,16 @@ public class Handle : MonoBehaviour
     public float angleLerpSpeed = 10f;
     public float minXOffset = 1f;
 
+    [Header("発射条件")]
+    public float horizontalSpeedThreshold = 5f;  // 横方向速度閾値（右方向に動いたら発射）
+    public float reloadDistanceThreshold = 1f;   // プレイヤーに近づいたらリロード完了
+
     [Header("攻撃関連")]
-    public float attackSpeedThreshold = 10f;
     public float attackDuration = 0.5f;
-    public float lockDistanceThreshold = 2f;
-
-    [Header("突き判定")]
-    public float horizontalSpeedThreshold = 3f;
-
-    [Header("リロード")]
-    public float reloadDistanceThreshold = 1f; // プレイヤーに近づけばリロード完了
-    private bool canFire = true;                // 発射可能かどうか
 
     [Header("弾発射")]
     public GameObject bulletPrefab;
     public Transform bulletSpawnPoint;
-    public float bulletSpeed = 5f;
     public Transform[] handleSegments;
 
     [Header("色変更")]
@@ -36,14 +30,11 @@ public class Handle : MonoBehaviour
     public Color readyToFireColor = Color.yellow;
 
     public bool isAttacking { get; private set; }
-    public bool ShouldLockAngle { get; private set; }
-
+    private bool canFire = true;
+    private bool isInAttackCoroutine = false;
+    private SpriteRenderer sr;
     private Vector3 prevMouseWorldPos;
     private float currentAngle = 0f;
-    private bool isInAttackCoroutine = false;
-
-    private SpriteRenderer sr;
-    private bool cachedIsThrustMotion = false;
 
     void Start()
     {
@@ -64,13 +55,11 @@ public class Handle : MonoBehaviour
         }
 
         Vector3 mouseWorldPos = GetMouseWorldPosition();
-        Vector3 mouseDelta = (mouseWorldPos - prevMouseWorldPos);
+        Vector3 mouseDelta = mouseWorldPos - prevMouseWorldPos;
         float horizontalSpeed = Mathf.Abs(mouseDelta.x) / Time.deltaTime;
 
-        cachedIsThrustMotion = (mouseDelta.x > 0f) && (horizontalSpeed >= horizontalSpeedThreshold);
-
-        // 攻撃判定は canFire も条件に追加
-        if (!isAttacking && canFire && horizontalSpeed >= attackSpeedThreshold && !isInAttackCoroutine)
+        // 発射条件は横方向速度が閾値以上かつ右方向に動いていて、リロード完了状態なら発射
+        if (!isAttacking && canFire && horizontalSpeed >= horizontalSpeedThreshold && mouseDelta.x > 0f && !isInAttackCoroutine)
         {
             StartCoroutine(TriggerAttack());
         }
@@ -85,8 +74,6 @@ public class Handle : MonoBehaviour
 
         // --- 回転処理 ---
         float targetAngle = 0f;
-        float distanceFromPlayer = Vector3.Distance(transform.position, player.position);
-
         if (Mathf.Approximately(direction.x, minXOffset))
         {
             transform.rotation = Quaternion.Euler(0, 0, 0f);
@@ -95,17 +82,10 @@ public class Handle : MonoBehaviour
         {
             Vector3 dir = transform.position - player.position;
             targetAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-
-            // 突きのみ角度固定
-            ShouldLockAngle = isAttacking && cachedIsThrustMotion && distanceFromPlayer >= lockDistanceThreshold;
-
-            if (!ShouldLockAngle)
-            {
-                float currentZ = transform.eulerAngles.z;
-                if (currentZ > 180f) currentZ -= 360f;
-                currentAngle = Mathf.LerpAngle(currentZ, targetAngle, Time.deltaTime * angleLerpSpeed);
-                transform.rotation = Quaternion.Euler(0, 0, currentAngle);
-            }
+            float currentZ = transform.eulerAngles.z;
+            if (currentZ > 180f) currentZ -= 360f;
+            currentAngle = Mathf.LerpAngle(currentZ, targetAngle, Time.deltaTime * angleLerpSpeed);
+            transform.rotation = Quaternion.Euler(0, 0, currentAngle);
         }
 
         // --- 色変更 ---
@@ -113,7 +93,7 @@ public class Handle : MonoBehaviour
         {
             if (!isAttacking)
                 sr.color = normalColor;
-            else if (ShouldLockAngle)
+            else if (canFire)
                 sr.color = readyToFireColor;
             else
                 sr.color = attackColor;
@@ -124,20 +104,13 @@ public class Handle : MonoBehaviour
     {
         isInAttackCoroutine = true;
         isAttacking = true;
-        canFire = false; // 発射したのでリロード待ち
+        canFire = false; // 発射後はリロード待ち
         Debug.Log("攻撃開始");
 
-        // 発射判定はコルーチン開始時に一回だけ決定
-        bool canShootNow = cachedIsThrustMotion && Vector3.Distance(transform.position, player.position) >= lockDistanceThreshold;
-        ShouldLockAngle = canShootNow;
-
-        Debug.Log($"TriggerAttack: canShootNow={canShootNow}, cachedIsThrustMotion={cachedIsThrustMotion}, distance={Vector3.Distance(transform.position, player.position)}");
-
-        if (canShootNow && bulletPrefab != null && bulletSpawnPoint != null && handleSegments.Length > 1)
+        if (bulletPrefab != null && bulletSpawnPoint != null && handleSegments.Length > 1)
         {
             GameObject bullet = Instantiate(bulletPrefab, bulletSpawnPoint.position, Quaternion.identity);
             BulletAlongCurve bulletScript = bullet.GetComponent<BulletAlongCurve>();
-
             if (bulletScript != null)
             {
                 List<Vector3> path = new List<Vector3>();
@@ -159,16 +132,11 @@ public class Handle : MonoBehaviour
                 Debug.LogWarning("BulletAlongCurve スクリプトが見つかりません");
             }
         }
-        else
-        {
-            Debug.Log("弾発射条件不成立");
-        }
 
         yield return new WaitForSeconds(attackDuration);
 
         isAttacking = false;
         isInAttackCoroutine = false;
-        ShouldLockAngle = false;
         Debug.Log("攻撃終了");
     }
 

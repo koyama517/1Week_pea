@@ -29,28 +29,22 @@ public class SwordController : MonoBehaviour
     {
         if (handle == null || segments.Length == 0) return;
 
-        // --- 構え判定：ハンドルがプレイヤーのx+1にいるか ---
-        bool isAtReadyPose = Mathf.Approximately(handle.transform.position.x, handle.player.position.x + 1f);
-
-        if (isAtReadyPose)
-        {
-            AlignSegmentsStraight();
-            return;
-        }
-
-        // --- 通常のしなり処理 ---
+        // ハンドルのY移動量を取得
         Vector3 currentHandlePos = handle.transform.position;
         float deltaY = currentHandlePos.y - prevHandlePos.y;
         prevHandlePos = currentHandlePos;
 
+        // しなり方向（上に動けば先端が垂れる）
         bendDirection = Mathf.Lerp(bendDirection, Mathf.Clamp(deltaY * inputSensitivity, -1f, 1f), Time.deltaTime * 10f);
 
+        // セグメントごとにしなり角を設定
         for (int i = 0; i < segments.Length; i++)
         {
-            float t = (float)i / (segments.Length - 1);
-            targetBends[i] = maxBend * t * -bendDirection;
+            float t = (float)i / (segments.Length - 1); // 根元→先端
+            targetBends[i] = maxBend * t * -bendDirection; // 符号反転で自然なしなりに
         }
 
+        // セグメント更新
         for (int i = 0; i < segments.Length; i++)
         {
             if (i == 0)
@@ -63,6 +57,7 @@ public class SwordController : MonoBehaviour
             {
                 Transform prev = segments[i - 1];
 
+                // しなり角を滑らかに追従
                 currentBends[i] = Mathf.Lerp(currentBends[i], targetBends[i], Time.deltaTime * returnSpeed);
 
                 float baseAngle = handle.transform.eulerAngles.z;
@@ -74,18 +69,6 @@ public class SwordController : MonoBehaviour
                 Vector3 targetPos = prev.position + prev.right * segmentLength;
                 segments[i].position = Vector3.Lerp(segments[i].position, targetPos, Time.deltaTime * followSpeed);
             }
-        }
-    }
-
-    void AlignSegmentsStraight()
-    {
-        Vector3 start = handle.transform.position;
-        Vector3 direction = Vector3.right; // 真右
-
-        for (int i = 0; i < segments.Length; i++)
-        {
-            segments[i].position = start + direction * segmentLength * i;
-            segments[i].rotation = Quaternion.Euler(0, 0, 0f); // 真右に固定
         }
     }
 }

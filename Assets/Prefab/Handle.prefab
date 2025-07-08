@@ -106,12 +106,15 @@ MonoBehaviour:
   minXOffset: 1
   attackSpeedThreshold: 10
   attackDuration: 0.5
-  lockDistanceThreshold: 1
-  horizontalSpeedThreshold: 3
+  lockDistanceThreshold: 0.5
+  enemyDetectRadius: 5
+  enemyDetectConeAngle: 90
+  horizontalSpeedThreshold: 15
   bulletPrefab: {fileID: 3201666210963881677, guid: 98c4aa4f58de6e047b1427086b9a4d3e, type: 3}
   bulletSpawnPoint: {fileID: 0}
   bulletSpeed: 5
   handleSegments: []
+  reloadDistance: 3
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   attackColor: {r: 1, g: 0, b: 0, a: 1}
   readyToFireColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
@@ -154,5 +157,5 @@ MonoBehaviour:
   followSpeed: 15
   rotationSpeed: 10
   returnSpeed: 3
-  maxBend: 150
-  inputSensitivity: 10
+  maxBend: 200
+  inputSensitivity: 20
