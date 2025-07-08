@@ -1,24 +1,74 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class SwordController : MonoBehaviour
 {
-    public Transform handle;           // Œ•‚Ì•¿
-    public Transform[] segments;       // ƒZƒOƒƒ“ƒgŒQi‰E•ûŒü‚É•À‚Ôj
-    public float segmentLength = 0.5f; // ƒZƒOƒƒ“ƒgŠÔ‚Ì‹——£
-    public float followSpeed = 15f;    // ‚µ‚È‚è‚Ì‘¬‚³i‘å‚«‚¢‚Ù‚Çd‚¢j
+    public Handle handle;
+    public Transform[] segments;
+
+    public float segmentLength = 0.5f;
+    public float followSpeed = 15f;
+    public float rotationSpeed = 10f;
+    public float returnSpeed = 3f;
+    public float maxBend = 20f;
+    public float inputSensitivity = 10f;
+
+    private float[] currentBends;
+    private float[] targetBends;
+    private float bendDirection = 0f;
+
+    private Vector3 prevHandlePos;
+
+    void Start()
+    {
+        currentBends = new float[segments.Length];
+        targetBends = new float[segments.Length];
+        prevHandlePos = handle.transform.position;
+    }
 
     void Update()
     {
-        // æ“ªƒZƒOƒƒ“ƒg‚Í•¿‚ÉŒÅ’è
-        segments[0].position = handle.position;
+        if (handle == null || segments.Length == 0) return;
 
-        for (int i = 1; i < segments.Length; i++)
+        // ãƒãƒ³ãƒ‰ãƒ«ã®Yç§»å‹•é‡ã‚’å–å¾—
+        Vector3 currentHandlePos = handle.transform.position;
+        float deltaY = currentHandlePos.y - prevHandlePos.y;
+        prevHandlePos = currentHandlePos;
+
+        // ã—ãªã‚Šæ–¹å‘ï¼ˆä¸Šã«å‹•ã‘ã°å…ˆç«¯ãŒå‚ã‚Œã‚‹ï¼‰
+        bendDirection = Mathf.Lerp(bendDirection, Mathf.Clamp(deltaY * inputSensitivity, -1f, 1f), Time.deltaTime * 10f);
+
+        // ã‚»ã‚°ãƒ¡ãƒ³ãƒˆã”ã¨ã«ã—ãªã‚Šè§’ã‚’è¨­å®š
+        for (int i = 0; i < segments.Length; i++)
         {
-            // –Ú•WˆÊ’u = ‘O‚ÌƒZƒOƒƒ“ƒg‚Ì‰E•ûŒü‚É segmentLength —£‚ê‚½êŠ
-            Vector3 targetPos = segments[i - 1].position + Vector3.right * segmentLength;
+            float t = (float)i / (segments.Length - 1); // æ ¹å…ƒâ†’å…ˆç«¯
+            targetBends[i] = maxBend * t * -bendDirection; // ç¬¦å·åè»¢ã§è‡ªç„¶ãªã—ãªã‚Šã«
+        }
 
-            // Œ»İˆÊ’u‚ğ‚È‚ß‚ç‚©‚É’Ç]‚³‚¹‚é
-            segments[i].position = Vector3.Lerp(segments[i].position, targetPos, Time.deltaTime * followSpeed);
+        // ã‚»ã‚°ãƒ¡ãƒ³ãƒˆæ›´æ–°
+        for (int i = 0; i < segments.Length; i++)
+        {
+            if (i == 0)
+            {
+                segments[i].position = handle.transform.position;
+                segments[i].rotation = handle.transform.rotation;
+                currentBends[i] = 0f;
+            }
+            else
+            {
+                Transform prev = segments[i - 1];
+
+                // ã—ãªã‚Šè§’ã‚’æ»‘ã‚‰ã‹ã«è¿½å¾“
+                currentBends[i] = Mathf.Lerp(currentBends[i], targetBends[i], Time.deltaTime * returnSpeed);
+
+                float baseAngle = handle.transform.eulerAngles.z;
+                float totalAngle = baseAngle + currentBends[i];
+
+                Quaternion targetRot = Quaternion.Euler(0, 0, totalAngle);
+                segments[i].rotation = Quaternion.Slerp(segments[i].rotation, targetRot, Time.deltaTime * rotationSpeed);
+
+                Vector3 targetPos = prev.position + prev.right * segmentLength;
+                segments[i].position = Vector3.Lerp(segments[i].position, targetPos, Time.deltaTime * followSpeed);
+            }
         }
     }
 }
